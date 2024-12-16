@@ -77,6 +77,12 @@ df_menor_matriculas.columns = ['Curso', 'Número de Matrículas']
 df_menor_matriculas = df_menor_matriculas.sort_values(by='Número de Matrículas', ascending=True).head(10)
 
 
+df_cursos_regiao = df.groupby(['NO_REGIAO', 'NO_CURSO_EDUC_PROFISSIONAL'])['QT_MAT_CURSO_TEC'].sum().reset_index()
+df_cursos_regiao.columns = ['Região', 'Curso', 'Número de Matrículas']
+
+df_top_cursos = df_cursos_regiao.sort_values(by=['Região', 'Número de Matrículas'], ascending=[True, False])
+df_top_cursos = df_top_cursos.groupby('Região').head(5)  # Pega os 5 maiores por região
+
 
 # Layout do app
 app.layout = dbc.Container([
@@ -119,6 +125,7 @@ app.layout = dbc.Container([
                     {'label': 'Análise por Ano e Região', 'value': 'ano_regiao'},
                     {'label': 'Número de Cursos por Estado', 'value': 'cursos_estado'},
                     {'label': 'Matrículas por Curso', 'value': 'matriculas_curso'},
+                    {'label': 'Cursos com Maior Número de Matrículas por Região', 'value': 'maior_cursos_regiao'},
                     {'label': 'Número de Alunos por Estado', 'value': 'alunos_estado'},
                     {'label': 'Número de Alunos por Curso', 'value': 'alunos_curso'},
                     {'label': 'Número de Cursos Técnicos por Modalidade', 'value': 'cursos_modalidade'},
@@ -351,6 +358,22 @@ def atualizar_grafico(tipo_grafico):
             yaxis=dict(autorange="reversed")  # Reverter ordem para exibir do menor para o maior
         )
 
+    elif tipo_grafico == 'maior_cursos_regiao':
+        fig = px.bar(
+            df_top_cursos,
+            x='Região',
+            y='Número de Matrículas',
+            color='Curso',
+            title="Cursos com Maior Número de Matrículas por Região",
+            text='Número de Matrículas'
+        )
+        # Ajustar layout para gráfico empilhado
+        fig.update_layout(
+            xaxis_title="Região",
+            yaxis_title="Número de Matrículas",
+            barmode='stack',  # Empilhamento das barras
+            legend_title="Curso"
+        )
 
 
     else:
