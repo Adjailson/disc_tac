@@ -95,7 +95,6 @@ def atualizar_grafico(tipo_grafico):
     
     #Select - Número de Escolas por Região
     if tipo_grafico == 'regiao':
-        
         df_regioes = dados.groupby('NO_REGIAO')['NO_ENTIDADE'].count().reset_index()
         df_regioes.columns = ['Região', 'Número de Escolas']
 
@@ -122,7 +121,7 @@ def atualizar_grafico(tipo_grafico):
             yaxis_title="Número de Escolas",
             uniformtext_minsize=8,
             uniformtext_mode='hide'
-        )
+        )        
 
     #Select - Número de Escolas por Zona (Urbana/Rural)
     elif tipo_grafico == 'zona':
@@ -168,14 +167,24 @@ def atualizar_grafico(tipo_grafico):
             color_discrete_sequence=px.colors.qualitative.Set2
         )
 
-        # Ajustar a posição do texto e layout
-        fig.update_traces(textposition='outside')
-        fig.update_layout(
-            xaxis_title="Dependência Administrativa",
-            yaxis_title="Número de Escolas",
-            uniformtext_minsize=8,
-            uniformtext_mode='hide'
+
+    elif tipo_grafico == 'cursos_estado':
+        # Agrupar os dados para calcular o número de cursos por estado
+        df_cursos_estado = dados.groupby('NO_UF')['NO_ENTIDADE'].count().reset_index()
+        df_cursos_estado.columns = ['Estado', 'Número de Cursos']
+
+        fig = px.bar(
+            df_cursos_estado,
+            x='Estado',
+            y='Número de Cursos',
+            title="Número de Cursos por Estado",
+            text='Número de Cursos',
+            color='Estado',
+            color_discrete_sequence=px.colors.qualitative.Set2
         )
+        # Adicionar valores como rótulos e ajustar layout
+        fig.update_traces(texttemplate='%{text}', textposition='outside')
+        fig.update_layout(xaxis_title="Estado", yaxis_title="Número de Cursos")
 
 
     elif tipo_grafico == 'ano_regiao':
@@ -221,6 +230,9 @@ def atualizar_grafico(tipo_grafico):
         df_matriculas_curso.columns = ['Curso', 'Número de Matrículas']
         df_matriculas_curso = df_matriculas_curso.sort_values(by='Número de Matrículas', ascending=False)
 
+        # Criar uma nova coluna para as cores: top 3 com cor específica, restante com outra cor
+        df_matriculas_curso['Cor'] = ['Top 3 - Cursos' if i < 3 else 'Outros' for i in range(len(df_matriculas_curso))]
+
         fig = px.bar(
             df_matriculas_curso.head(10),  # Mostrar os 10 cursos com mais matrículas
             x='Número de Matrículas',
@@ -228,15 +240,19 @@ def atualizar_grafico(tipo_grafico):
             orientation='h',  # Gráfico de barras horizontal
             title="Top 10 Cursos por Matrículas",
             text='Número de Matrículas',
-            color='Curso',
-            color_discrete_sequence=px.colors.qualitative.Set2
+            color='Cor',
+            #color_discrete_sequence=px.colors.qualitative.Set2
+            color_discrete_map={
+                'Top 3 - Cursos': '#FF7F50',  # Cor personalizada para os 3 primeiros (Azul)
+                'Outros': '#d3d3d3'  # Cor cinza para os demais
+            },
         )
         # Adicionar rótulos com os valores e ajustar layout
         fig.update_traces(texttemplate='%{text}', textposition='outside')
         fig.update_layout(
             yaxis_title="Curso",
             xaxis_title="Número de Matrículas",
-            #yaxis=dict(autorange="reversed")  # Reverter ordem para exibir do maior ao menor
+            yaxis=dict(autorange="reversed")  # Reverter ordem para exibir do maior ao menor
         )
 
     #Select  - Número de Alunos por Estado
@@ -381,6 +397,9 @@ def atualizar_grafico(tipo_grafico):
         # Ordenar pelo menor número de matrículas e pegar os 10 menores
         df_menor_matriculas = df_menor_matriculas.sort_values(by='Número de Matrículas', ascending=True).head(10)
 
+        # Criar uma nova coluna para as cores: top 3 com cor específica, restante com outra cor
+        df_menor_matriculas['Cor'] = ['Top 3' if i < 3 else 'Outros' for i in range(len(df_menor_matriculas))]
+
         fig = px.bar(
             df_menor_matriculas,
             x='Número de Matrículas',
@@ -388,15 +407,19 @@ def atualizar_grafico(tipo_grafico):
             orientation='h',  # Gráfico de barras horizontais
             title="Top 10 Cursos com Menor Número de Matrículas",
             text='Número de Matrículas',
-            color='Curso',
-            color_discrete_sequence=px.colors.qualitative.Set2  # Paleta de cores do Plotly
+            color='Cor',
+            #color_discrete_sequence=px.colors.qualitative.Set3
+            color_discrete_map={
+                'Top 3': '#FF7F50',  # Cor personalizada para os 3 primeiros (Azul)
+                'Outros': '#d3d3d3'  # Cor cinza para os demais
+            },
         )
         # Adicionar rótulos com os valores e ajustar layout
         fig.update_traces(texttemplate='%{text}', textposition='outside')
         fig.update_layout(
             xaxis_title="Número de Matrículas",
             yaxis_title="Curso",
-            #yaxis=dict(autorange="reversed")  # Reverter ordem para exibir do menor para o maior
+            yaxis=dict(autorange="reversed")  # Reverter ordem para exibir do menor para o maior
         )
 
     #Select - Cursos com Maior Número de Matrículas por Região
@@ -438,7 +461,7 @@ def atualizar_grafico(tipo_grafico):
             color='Curso',
             title="Cursos com Maior Número de Matrículas por Estado",
             text='Número de Matrículas',
-            color_discrete_sequence=px.colors.qualitative.Set2
+            color_discrete_sequence=px.colors.qualitative.Set3
         )
         # Ajustar layout para gráfico empilhado
         fig.update_layout(

@@ -71,8 +71,6 @@ app.layout = dbc.Container([
         )
     ),
 
-
-
     dbc.Row(
         dbc.Col(
             dcc.Graph(id='grafico-filtro'),
