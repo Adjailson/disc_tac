@@ -8,53 +8,7 @@ app = Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP])
 
 # Carregar a base real
 caminho_base = "base/suplemento_cursos_tecnicos_2023.csv"
-df = pd.read_csv(caminho_base, sep=";", encoding="latin1")
-
-# Limpar e preparar os dados
-
-
-df_localizacao = df.groupby('TP_LOCALIZACAO')['NO_ENTIDADE'].count().reset_index()
-df_localizacao['Zona'] = df_localizacao['TP_LOCALIZACAO'].map({1: 'Urbana', 2: 'Rural'})
-df_localizacao.columns = ['TP_LOCALIZACAO', 'Número de Escolas', 'Zona']
-
-#Comparação por Dependência Administrativa (Pública, privada , federal..)
-df_dependencia = df.groupby('TP_DEPENDENCIA')['NO_ENTIDADE'].count().reset_index()
-df_dependencia['Dependência'] = df_dependencia['TP_DEPENDENCIA'].map({
-    1: 'Federal', 2: 'Estadual', 3: 'Municipal', 4: 'Privada'
-})
-df_dependencia.columns = ['TP_DEPENDENCIA', 'Número de Escolas', 'Dependência']
-
-# Agrupar os dados por Ano e Região
-df_ano_regiao = df.groupby(['NU_ANO_CENSO', 'NO_REGIAO'])['NO_ENTIDADE'].count().reset_index()
-df_ano_regiao.columns = ['Ano', 'Região', 'Número de Escolas']
-
-# Agrupar os dados para calcular o número de cursos por estado
-df_cursos_estado = df.groupby('NO_UF')['NO_ENTIDADE'].count().reset_index()
-df_cursos_estado.columns = ['Estado', 'Número de Cursos']
-
-# Agrupar os dados para calcular o número de matrículas por curso
-df_matriculas_curso = df.groupby('NO_CURSO_EDUC_PROFISSIONAL')['QT_MAT_CURSO_TEC'].sum().reset_index()
-df_matriculas_curso.columns = ['Curso', 'Número de Matrículas']
-df_matriculas_curso = df_matriculas_curso.sort_values(by='Número de Matrículas', ascending=False)
-
-# Agrupar os dados para calcular o número de alunos por estado
-df_alunos_estado = df.groupby('NO_UF')['QT_MAT_CURSO_TEC'].sum().reset_index()
-df_alunos_estado.columns = ['Estado', 'Número de Alunos']
-
-# Agrupar os dados para calcular o número de alunos por curso
-df_alunos_curso = df.groupby('NO_CURSO_EDUC_PROFISSIONAL')['QT_MAT_CURSO_TEC'].sum().reset_index()
-df_alunos_curso.columns = ['Curso', 'Número de Alunos']
-df_alunos_curso = df_alunos_curso.sort_values(by='Número de Alunos', ascending=False)
-
-# Agrupar os dados por estado e modalidade
-df_cursos_modalidade = df.groupby('NO_UF').agg({
-    'QT_CURSO_TEC_CT': 'sum',
-    'QT_CURSO_TEC_SUBS': 'sum'
-}).reset_index()
-# Ajustar os nomes das colunas
-df_cursos_modalidade.columns = ['Estado', 'Ensino Médio Integrado', 'Educação Subsequente']
-
-
+dados = pd.read_csv(caminho_base, sep=";", encoding="latin1")
 
 # Layout do app
 app.layout = dbc.Container([
@@ -89,25 +43,16 @@ app.layout = dbc.Container([
     dbc.Row(
         dbc.Col(
             dcc.Dropdown(
-                id='dropdown-grafico',
+                id='dropdown-regiao',
                 options=[
-                    {'label': 'Número de Escolas por Região', 'value': 'barras'},
-                    {'label': 'Número de Escolas por Zona (Urbana/Rural)', 'value': 'pizza'},
-                    {'label': 'Comparação por Dependência Administrativa', 'value': 'dependencia'},
-                    {'label': 'Análise por Ano e Região', 'value': 'ano_regiao'},
-                    {'label': 'Número de Cursos por Estado', 'value': 'cursos_estado'},
-                    {'label': 'Matrículas por Curso', 'value': 'matriculas_curso'},
-                    {'label': 'Número de Alunos por Estado', 'value': 'alunos_estado'},
-                    {'label': 'Número de Alunos por Curso', 'value': 'alunos_curso'},
-                    {'label': 'Número de Cursos Técnicos por Modalidade', 'value': 'cursos_modalidade'},
-
-
+                    {'label': 'Cursos com Maior Número de Matrículas por Região', 'value': 'maior_cursos_regiao'},
+                    {'label': 'Cursos com Maior Número de Matrículas por Estado', 'value': 'maior_cursos_estado'},
                 ],
                 value='barras',
                 placeholder='Escolha o tipo de gráfico',
                 multi=False
             ),
-            width=12,
+            width=6,
             className="mb-4"
         )
     ),
@@ -117,12 +62,12 @@ app.layout = dbc.Container([
         dbc.Col(
             dcc.Dropdown(
                 id='dropdown-estado',
-                options=[{'label': uf, 'value': uf} for uf in df['SG_UF'].unique()],
+                options=[{'label': uf, 'value': uf} for uf in dados['SG_UF'].unique()],
                 placeholder="Selecione um estado",
-                multi=True,  # Permitir seleção de múltiplos estados
+                multi=False,  # Permitir seleção de múltiplos estados
                 className="mb-4"
             ),
-            width=12
+            width=6
         )
     ),
 
@@ -130,7 +75,7 @@ app.layout = dbc.Container([
 
     dbc.Row(
         dbc.Col(
-            dcc.Graph(id='grafico-escolas'),
+            dcc.Graph(id='grafico-filtro'),
             width=12
         )
     ),
@@ -144,59 +89,74 @@ app.layout = dbc.Container([
 ], fluid=True)
 
 @app.callback(
-    Output('grafico-escolas', 'figure'),
-    [Input('dropdown-grafico', 'value'),
+    Output('grafico-filtro', 'figure'),
+    [Input('dropdown-regiao', 'value'),
      Input('dropdown-estado', 'value')]
 )
 def atualizar_grafico(tipo_grafico, estados_selecionados):
     # Filtrar o DataFrame com base nos estados selecionados
-    df_filtrado = df
+    #df_filtrado = dados
+    print(estados_selecionados)
     if estados_selecionados:
-        df_filtrado = df[df['SG_UF'].isin(estados_selecionados)]
+        df_filtrado = dados[dados['SG_UF'].isin(estados_selecionados)]
+        print(df_filtrado)
 
-    # Lógica para os diferentes tipos de gráficos
-    if tipo_grafico == 'barras':
-        df_regioes = df_filtrado.groupby('NO_REGIAO')['NO_ENTIDADE'].count().reset_index()
-        fig = px.bar(
-            df_regioes,
-            x='NO_REGIAO',
-            y='NO_ENTIDADE',
-            title="Número de Escolas por Região",
-            text='NO_ENTIDADE'
-        )
-        fig.update_traces(texttemplate='%{text}', textposition='outside')
-        fig.update_layout(xaxis_title="Região", yaxis_title="Número de Escolas")
+    #Select - Cursos com Maior Número de Matrículas por Região
+    if tipo_grafico == 'maior_cursos_regiao':
+        df_cursos_regiao = dados.groupby(['NO_REGIAO', 'NO_CURSO_EDUC_PROFISSIONAL'])['QT_MAT_CURSO_TEC'].sum().reset_index()
+        df_cursos_regiao.columns = ['Região', 'Curso', 'Número de Matrículas']
 
-    elif tipo_grafico == 'cursos_modalidade':
-        df_cursos_modalidade = df_filtrado.groupby('NO_UF').agg({
-            'QT_CURSO_TEC_CT': 'sum',
-            'QT_CURSO_TEC_SUBS': 'sum'
-        }).reset_index()
-        df_cursos_modalidade.columns = ['Estado', 'Ensino Médio Integrado', 'Educação Subsequente']
-
-        df_long = df_cursos_modalidade.melt(
-            id_vars=['Estado'],
-            value_vars=['Ensino Médio Integrado', 'Educação Subsequente'],
-            var_name='Modalidade',
-            value_name='Número de Cursos'
-        )
+        df_top_cursos = df_cursos_regiao.sort_values(by=['Região', 'Número de Matrículas'], ascending=[True, False])
+        df_top_cursos = df_top_cursos.groupby('Região').head(5)  # Pega os 5 maiores por região
 
         fig = px.bar(
-            df_long,
+            df_top_cursos,
+            x='Região',
+            y='Número de Matrículas',
+            color='Curso',
+            title="Cursos com Maior Número de Matrículas por Região",
+            text='Número de Matrículas'
+        )
+        # Ajustar layout para gráfico empilhado
+        fig.update_layout(
+            xaxis_title="Região",
+            yaxis_title="Número de Matrículas",
+            barmode='stack',  # Empilhamento das barras
+            legend_title="Curso"
+        )
+
+    #Select - Cursos com Maior Número de Matrículas por Estado
+    elif tipo_grafico == 'maior_cursos_estado':
+        df_cursos_estado = dados.groupby(['SG_UF', 'NO_CURSO_EDUC_PROFISSIONAL'])['QT_MAT_CURSO_TEC'].sum().reset_index()
+        df_cursos_estado.columns = ['Estado', 'Curso', 'Número de Matrículas']
+
+        df_top_cursos = df_cursos_estado.sort_values(by=['Estado', 'Número de Matrículas'], ascending=[True, False])
+        df_top_cursos = df_top_cursos.groupby('Estado').head(3)  # Pega os 3 maiores por região
+
+        fig = px.bar(
+            df_top_cursos,
             x='Estado',
-            y='Número de Cursos',
-            color='Modalidade',
-            title="Número de Cursos Técnicos por Modalidade e Estado",
-            text='Número de Cursos'
+            y='Número de Matrículas',
+            color='Curso',
+            title="Cursos com Maior Número de Matrículas por Estado",
+            text='Número de Matrículas',
+            color_discrete_sequence=px.colors.qualitative.Set2
         )
-        fig.update_traces(texttemplate='%{text}', textposition='inside')
-        fig.update_layout(xaxis_title="Estado", yaxis_title="Número de Cursos", barmode='stack')
-
-    # Adicionar outros tipos de gráficos conforme necessário
+        # Ajustar layout para gráfico empilhado
+        fig.update_layout(
+            xaxis_title="Estado",
+            yaxis_title="Número de Matrículas",
+            barmode='stack',  # Empilhamento das barras
+            legend_title="Curso"
+        )
 
     else:
         fig = {}
     
     return fig
+
+# Executar o servidor localhost
+if __name__ == "__main__":
+    app.run_server(debug=True)
 
 
