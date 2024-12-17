@@ -50,7 +50,7 @@ app.layout = dbc.Container([
                     {'label': 'Número por Dependência Administrativa', 'value': 'dependencia'},
                     {'label': 'Análise por Ano e Região', 'value': 'ano_regiao'},
                     {'label': 'Número de Cursos por Estado', 'value': 'cursos_estado'},
-                    {'label': 'Matrículas por Curso', 'value': 'matriculas_curso'},
+                    {'label': 'Matrículas por Curso (Top 10)', 'value': 'matriculas_curso'},
                     {'label': 'Número de Alunos por Estado', 'value': 'alunos_estado'},
                     {'label': 'Número de Alunos por Curso', 'value': 'alunos_curso'},
                     {'label': 'Número de Cursos Técnicos por Modalidade', 'value': 'cursos_modalidade'},
